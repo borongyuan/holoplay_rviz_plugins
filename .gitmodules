@@ -1,0 +1,3 @@
+[submodule "HoloPlayCoreSDK"]
+	path = HoloPlayCoreSDK
+	url = ../../Looking-Glass/HoloPlayCoreSDK.git
