@@ -1,0 +1,9 @@
+<library path="holoplay_rviz_plugins">
+  <class name="holoplay_rviz_plugins/LookingGlass"
+         type="holoplay_rviz_plugins::LookingGlassDisplay"
+         base_class_type="rviz_common::Display">
+    <description>
+      Renders on Looking Glass.
+    </description>
+  </class>
+</library>
