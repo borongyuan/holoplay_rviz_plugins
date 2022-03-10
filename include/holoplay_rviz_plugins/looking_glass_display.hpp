@@ -16,12 +16,12 @@
 
 #ifndef Q_MOC_RUN
 
-#include <QDesktopWidget>
-#include <QApplication>
-
 #include "rviz_common/display.hpp"
 #include "rviz_common/panel_dock_widget.hpp"
 #include "rviz_common/render_panel.hpp"
+#include "rviz_rendering/logging.hpp"
+
+#include "HoloPlayCore.h"
 
 #endif
 
@@ -38,9 +38,11 @@ namespace holoplay_rviz_plugins
         void onInitialize() override;
 
     private:
+        int win_x, win_y, win_w, win_h;
         std::unique_ptr<rviz_common::RenderPanel> render_panel_;
         rviz_common::PanelDockWidget *looking_glass_panel_;
 
+        void initializeLookingGlass();
         void setupLookingGlassPanel();
     };
 } // namespace holoplay_rviz_plugins

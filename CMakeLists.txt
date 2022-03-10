@@ -15,6 +15,23 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
+set(HOLOPLAY_CORE_BASE_PATH "${PROJECT_SOURCE_DIR}/HoloPlayCoreSDK/HoloPlayCore")
+
+set(DLL_DIR "linux")
+
+if(WIN32)
+  set(DLL_DIR "Win64")
+  if("${CMAKE_SIZEOF_VOID_P}" STREQUAL "4")
+    set(DLL_DIR "Win32")
+  endif()
+  set(HOLOPLAY_CORE_DLL_LOCATION "${HOLOPLAY_CORE_BASE_PATH}/dylib/${DLL_DIR}/HoloPlayCore.dll")
+  add_custom_command(TARGET main POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different "${HOLOPLAY_CORE_DLL_LOCATION}" $<TARGET_FILE_DIR:main>)
+endif(WIN32)
+
+if(APPLE)
+  set(DLL_DIR "macos")
+endif(APPLE)
+
 # find dependencies
 find_package(ament_cmake_auto REQUIRED)
 ament_auto_find_build_dependencies()
@@ -33,6 +50,20 @@ endforeach()
 ament_auto_add_library(${PROJECT_NAME} SHARED
   ${holoplay_rviz_plugins_moc_files}
   src/looking_glass_display.cpp
+)
+
+target_include_directories(${PROJECT_NAME} PRIVATE
+  "${HOLOPLAY_CORE_BASE_PATH}/include"
+)
+
+find_library(HOLOPLAY_CORE_LOCATION HoloPlayCore PATHS "${HOLOPLAY_CORE_BASE_PATH}/dylib" PATH_SUFFIXES ${DLL_DIR})
+target_link_libraries(${PROJECT_NAME}
+  ${HOLOPLAY_CORE_LOCATION}
+)
+
+install(
+  FILES ${HOLOPLAY_CORE_LOCATION}
+  DESTINATION lib
 )
 
 pluginlib_export_plugin_description_file(rviz_common plugins_description.xml)
