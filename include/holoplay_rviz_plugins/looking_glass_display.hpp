@@ -16,10 +16,17 @@
 
 #ifndef Q_MOC_RUN
 
+#include <OgreCamera.h>
+#include <OgreColourValue.h>
+
 #include "rviz_common/display.hpp"
+#include "rviz_common/display_context.hpp"
 #include "rviz_common/panel_dock_widget.hpp"
 #include "rviz_common/render_panel.hpp"
+#include "rviz_common/view_manager.hpp"
+#include "rviz_common/properties/float_property.hpp"
 #include "rviz_rendering/logging.hpp"
+#include "rviz_rendering/render_window.hpp"
 
 #include "HoloPlayCore.h"
 
@@ -27,7 +34,7 @@
 
 namespace holoplay_rviz_plugins
 {
-    class LookingGlassDisplay : public rviz_common::Display
+    class LookingGlassDisplay : public rviz_common::Display, public Ogre::RenderTargetListener
     {
         Q_OBJECT
 
@@ -35,14 +42,30 @@ namespace holoplay_rviz_plugins
         LookingGlassDisplay();
         ~LookingGlassDisplay();
 
+        void update(float wall_dt, float ros_dt) override;
+
+        void preRenderTargetUpdate(const Ogre::RenderTargetEvent &evt) override;
+        void postRenderTargetUpdate(const Ogre::RenderTargetEvent &evt) override;
+
+    protected:
         void onInitialize() override;
 
-    private:
-        int win_x, win_y, win_w, win_h;
-        std::unique_ptr<rviz_common::RenderPanel> render_panel_;
+    private:    
+        int win_x_, win_y_, win_w_, win_h_, tile_x_, tile_y_;
+
+        std::vector<Ogre::Camera *> virtual_cameras_;
+
+        rviz_common::properties::FloatProperty *near_clip_property_;
+        rviz_common::properties::FloatProperty *far_clip_property_;
+
+        std::unique_ptr<rviz_common::RenderPanel> holoplay_panel_;
         rviz_common::PanelDockWidget *looking_glass_panel_;
 
+        Ogre::SceneNode * background_scene_node_;
+
         void initializeLookingGlass();
+        void setupHoloPlayPanel();
         void setupLookingGlassPanel();
+        void updateCamera();
     };
 } // namespace holoplay_rviz_plugins

@@ -11,21 +11,46 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
+#include <iostream>
 #include "holoplay_rviz_plugins/looking_glass_display.hpp"
 
 namespace holoplay_rviz_plugins
 {
     using rviz_common::properties::StatusLevel;
 
-    LookingGlassDisplay::LookingGlassDisplay() = default;
+    LookingGlassDisplay::LookingGlassDisplay()
+    {
+        near_clip_property_ = new rviz_common::properties::FloatProperty("Near Clip", 0.0, "", this);
+
+        far_clip_property_ = new rviz_common::properties::FloatProperty("Far Clip", 0.0, "", this);
+    }
 
     LookingGlassDisplay::~LookingGlassDisplay()
     {
         if (initialized())
         {
+            rviz_rendering::RenderWindowOgreAdapter::removeListener(holoplay_panel_->getRenderWindow(), this);
             hpc_CloseApp();
         }
+    }
+
+    void LookingGlassDisplay::update(float wall_dt, float ros_dt)
+    {
+        (void)wall_dt;
+        (void)ros_dt;
+        // rviz_rendering::RenderWindowOgreAdapter::getOgreCamera(holoplay_panel_->getRenderWindow())->setPosition(0, 0, 0);
+        Ogre::ColourValue *bg = new Ogre::ColourValue(0.0f, 0.0f, 0.0f, 1.0f);
+        rviz_rendering::RenderWindowOgreAdapter::setBackgroundColor(holoplay_panel_->getRenderWindow(), bg);
+    }
+
+    void LookingGlassDisplay::preRenderTargetUpdate(const Ogre::RenderTargetEvent &evt)
+    {
+        (void)evt;
+    }
+
+    void LookingGlassDisplay::postRenderTargetUpdate(const Ogre::RenderTargetEvent &evt)
+    {
+        (void)evt;
     }
 
     void LookingGlassDisplay::onInitialize()
@@ -33,7 +58,10 @@ namespace holoplay_rviz_plugins
         try
         {
             initializeLookingGlass();
+            setupHoloPlayPanel();
             setupLookingGlassPanel();
+
+            setStatus(StatusLevel::Ok, "HoloPlay", "OK");
         }
         catch (const std::exception &e)
         {
@@ -91,13 +119,13 @@ namespace holoplay_rviz_plugins
             hpc_GetDeviceType(0, buf, 1000);
             RVIZ_RENDERING_LOG_INFO_STREAM("\tDevice type: " << buf);
 
-            win_x = hpc_GetDevicePropertyWinX(0);
-            win_y = hpc_GetDevicePropertyWinY(0);
-            win_w = hpc_GetDevicePropertyScreenW(0);
-            win_h = hpc_GetDevicePropertyScreenH(0);
+            win_x_ = hpc_GetDevicePropertyWinX(0);
+            win_y_ = hpc_GetDevicePropertyWinY(0);
+            win_w_ = hpc_GetDevicePropertyScreenW(0);
+            win_h_ = hpc_GetDevicePropertyScreenH(0);
             RVIZ_RENDERING_LOG_INFO_STREAM("Window parameters for display " << 0 << ":");
-            RVIZ_RENDERING_LOG_INFO_STREAM("\tPosition: (" << win_x << ", " << win_y << ")");
-            RVIZ_RENDERING_LOG_INFO_STREAM("\tSize: (" << win_w << ", " << win_h << ")");
+            RVIZ_RENDERING_LOG_INFO_STREAM("\tPosition: (" << win_x_ << ", " << win_y_ << ")");
+            RVIZ_RENDERING_LOG_INFO_STREAM("\tSize: (" << win_w_ << ", " << win_h_ << ")");
             RVIZ_RENDERING_LOG_INFO_STREAM("\tAspect ratio: " << hpc_GetDevicePropertyDisplayAspect(0));
 
             RVIZ_RENDERING_LOG_INFO_STREAM("Shader uniforms for display " << 0 << ":");
@@ -110,17 +138,36 @@ namespace holoplay_rviz_plugins
             RVIZ_RENDERING_LOG_INFO_STREAM("\tRI: " << hpc_GetDevicePropertyRi(0));
             RVIZ_RENDERING_LOG_INFO_STREAM("\tBI: " << hpc_GetDevicePropertyBi(0));
             RVIZ_RENDERING_LOG_INFO_STREAM("\tinvView: " << hpc_GetDevicePropertyInvView(0));
+
+            tile_x_ = hpc_GetDevicePropertyTileX(0);
+            tile_y_ = hpc_GetDevicePropertyTileY(0);
         }
+    }
+
+    void LookingGlassDisplay::setupHoloPlayPanel()
+    {
+        holoplay_panel_ = std::make_unique<rviz_common::RenderPanel>();
+        holoplay_panel_->initialize(context_, true);
+        setAssociatedWidget(holoplay_panel_.get());
+
+        static int count = 0;
+        holoplay_panel_->getRenderWindow()->setObjectName("HoloPlayRenderWindow" + QString::number(count++));
+
+        holoplay_panel_->setViewController(context_->getViewManager()->getCurrent());
+        rviz_rendering::RenderWindowOgreAdapter::addListener(holoplay_panel_->getRenderWindow(), this);
     }
 
     void LookingGlassDisplay::setupLookingGlassPanel()
     {
-        render_panel_ = std::make_unique<rviz_common::RenderPanel>();
-        setAssociatedWidget(render_panel_.get());
         looking_glass_panel_ = getAssociatedWidgetPanel();
+        looking_glass_panel_->setTitleBarWidget(new QWidget(looking_glass_panel_));
         looking_glass_panel_->setFloating(true);
-        looking_glass_panel_->setGeometry(win_x, win_y, win_w, win_h);
-        looking_glass_panel_->showFullScreen();
+        looking_glass_panel_->setGeometry(win_x_, win_y_, win_w_, win_h_);
+        looking_glass_panel_->setWindowState(looking_glass_panel_->windowState() | Qt::WindowFullScreen);
+    }
+
+    void LookingGlassDisplay::updateCamera()
+    {
     }
 } // namespace holoplay_rviz_plugins
 
